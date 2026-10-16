@@ -1,17 +1,19 @@
 /**
  * API client for NAFDAC Medicine Registry Verification
- * Adheres strictly to the contract while providing reliable fallback
+ * Connects directly to the FastAPI verification backend (/api/v1)
+ * with graceful fallback to local registry engine if backend is unreachable.
  */
 
-import { CheckRequest, CheckResponse, MatchedRecord } from './types';
+import { CheckRequest, CheckResponse, MatchedRecord, LanguageCode } from './types';
 import { performRegistryCheck, searchRegistryByQuery, NAFDAC_REGISTRY_DATABASE } from './mockRegistry';
 
-const BACKEND_BASE_URL = ''; // Same-origin or empty proxy
+const BACKEND_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/+$/, '');
 
 export async function checkMedicine(request: CheckRequest): Promise<CheckResponse> {
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3500);
+    // 15s timeout to allow Gemma 4 text/explainer generation if enabled
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
 
     const response = await fetch(`${BACKEND_BASE_URL}/api/v1/check`, {
       method: 'POST',
@@ -28,19 +30,51 @@ export async function checkMedicine(request: CheckRequest): Promise<CheckRespons
       const data = await response.json();
       return data as CheckResponse;
     }
-    // If backend returns an error or 404, fallback to local engine
     console.warn(`Backend responded with ${response.status}, falling back to built-in registry engine.`);
     return fallbackCheck(request);
   } catch (err) {
     // Network failure / offline / backend not running yet
+    console.warn('Backend verification call failed, falling back to local database:', err);
     return fallbackCheck(request);
   }
 }
 
 async function fallbackCheck(request: CheckRequest): Promise<CheckResponse> {
-  // Simulate 450ms network delay for realistic experience
   await new Promise((r) => setTimeout(r, 450));
   return performRegistryCheck(request);
+}
+
+export async function checkText(query: string, language: LanguageCode = 'en'): Promise<CheckResponse> {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+    const response = await fetch(`${BACKEND_BASE_URL}/api/v1/check-text`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ query, language }),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (response.ok) {
+      return (await response.json()) as CheckResponse;
+    }
+  } catch (err) {
+    console.warn('Backend /check-text call failed:', err);
+  }
+
+  // Fallback: parse basic NRN from text
+  const match = query.match(/[A-Za-z0-9]{2,4}-[0-9]{4,6}/);
+  const fallbackReq: CheckRequest = {
+    nrn: match ? match[0] : undefined,
+    product_name: query,
+    language,
+  };
+  return fallbackCheck(fallbackReq);
 }
 
 export async function searchRegistry(query: string): Promise<MatchedRecord[]> {
@@ -57,7 +91,7 @@ export async function searchRegistry(query: string): Promise<MatchedRecord[]> {
 
 export async function getRegistryRecord(nrn: string): Promise<MatchedRecord | null> {
   try {
-    const res = await fetch(`${BACKEND_BASE_URL}/api/v1/registry/${encodeURIComponent(nrn)}`);
+    const res = await fetch(`${BACKEND_BASE_URL}/api/v1/product/${encodeURIComponent(nrn)}`);
     if (res.ok) {
       return await res.json();
     }
@@ -81,72 +115,66 @@ export async function getRegistrySampleList(limit = 20): Promise<MatchedRecord[]
 }
 
 /**
- * Intelligent Image Analysis / OCR extraction simulation
- * In real usage, sends to multimodal vision endpoint or parses label text
+ * Multimodal Image Analysis / OCR extraction
+ * Sends packaging photo to backend /api/v1/scan-label (Gemini Vision + fail-closed).
+ * Fails closed as unreadable rather than fabricating hardcoded medicine brands.
  */
 export async function extractFromImage(file: File): Promise<{
   extractedData: CheckRequest;
   rawText: string;
   confidence: number;
 }> {
-  // Simulate image processing OCR scan
-  await new Promise((r) => setTimeout(r, 900));
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
 
-  const filename = file.name.toLowerCase();
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 20000);
 
-  // Smart heuristic based on file name or generic fallback
-  if (filename.includes('lonart')) {
-    return {
-      extractedData: {
-        nrn: '04-1234', // Cloned scenario
-        product_name: 'Lonart DS Tablets',
-        strength: '80 mg / 480 mg',
-        dosage_form: 'Tablet',
-        active_ingredients: ['Artemether', 'Lumefantrine']
-      },
-      rawText: 'LONART DS TABLETS • NAFDAC REG NO: 04-1234 • ARTEMETHER 80MG + LUMEFANTRINE 480MG • BLISS GVS PHARMA',
-      confidence: 0.89
-    };
+    const response = await fetch(`${BACKEND_BASE_URL}/api/v1/scan-label`, {
+      method: 'POST',
+      body: formData,
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (response.ok) {
+      const data = await response.json();
+      const hasAnyField = Boolean(
+        data.nrn ||
+        data.product_name ||
+        (data.active_ingredients && data.active_ingredients.length > 0) ||
+        data.strength ||
+        data.dosage_form
+      );
+
+      return {
+        extractedData: {
+          nrn: data.nrn || '',
+          product_name: data.product_name || '',
+          strength: data.strength || '',
+          dosage_form: data.dosage_form || '',
+          active_ingredients: data.active_ingredients || [],
+        },
+        rawText: data.raw_text || (hasAnyField ? `${data.product_name || ''} ${data.nrn || ''}`.trim() : 'No legible medicine identifiers found on packaging.'),
+        confidence: hasAnyField ? 0.95 : 0.0,
+      };
+    }
+  } catch (err) {
+    console.warn('Backend /scan-label call failed or timed out:', err);
   }
 
-  if (filename.includes('panadol')) {
-    return {
-      extractedData: {
-        nrn: '04-4589',
-        product_name: 'Panadol Extra Caplets',
-        strength: '500 mg / 65 mg',
-        dosage_form: 'Caplet',
-        active_ingredients: ['Paracetamol', 'Caffeine']
-      },
-      rawText: 'PANADOL EXTRA • NAFDAC NO: 04-4589 • PARACETAMOL 500MG, CAFFEINE 65MG • GSK CONSUMER',
-      confidence: 0.94
-    };
-  }
-
-  if (filename.includes('amoxil')) {
-    return {
-      extractedData: {
-        nrn: '04-0199',
-        product_name: 'Amoxil Capsules',
-        strength: '500 mg',
-        dosage_form: 'Capsule',
-        active_ingredients: ['Amoxicillin']
-      },
-      rawText: 'AMOXIL 500mg CAPSULES • NAFDAC REG NO: 04-0199 • AMOXICILLIN TRIHYDRATE • BEECHAM PHARMA',
-      confidence: 0.91
-    };
-  }
-
-  // Default simulated OCR extraction from general photo
+  // Fail-closed fallback: never return a fake brand or fabricated match
   return {
     extractedData: {
-      nrn: '04-1234',
-      product_name: 'Emzor Paracetamol Tablets',
-      strength: '500 mg',
-      dosage_form: 'Tablet',
-      active_ingredients: ['Paracetamol']
+      nrn: '',
+      product_name: '',
+      strength: '',
+      dosage_form: '',
+      active_ingredients: [],
     },
-    rawText: 'EMZOR PARACETAMOL 500mg • NAFDAC REG NO: 04-1234 • BATCH NO: B2881 • EMZOR PHARMACEUTICALS',
-    confidence: 0.95
+    rawText: 'Could not extract readable text from packaging photo.',
+    confidence: 0.0,
   };
 }

@@ -7,7 +7,9 @@ export type VerdictType =
   | 'REGISTERED_MATCH'
   | 'REGISTERED_MISMATCH'
   | 'NOT_FOUND'
-  | 'EXPIRED';
+  | 'EXPIRED'
+  | 'INACTIVE'
+  | 'UNREADABLE';
 
 export type ConfidenceTier = 'HIGH' | 'MEDIUM' | 'LOW' | 'CONFLICT';
 

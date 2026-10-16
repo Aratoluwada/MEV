@@ -6,3 +6,17 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Python Backend
+backend/.venv/
+.venv/
+backend/.env
+.env
+__pycache__/
+backend/**/__pycache__/
+*.py[cod]
+.pytest_cache/
+backend/.pytest_cache/
+backend/data/*
+!backend/data/.gitkeep
+backend/medicine_registry_checker.egg-info/

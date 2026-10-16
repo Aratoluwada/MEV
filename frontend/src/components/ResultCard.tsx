@@ -70,18 +70,33 @@ export const ResultCard: React.FC<ResultCardProps> = ({
           icon: AlertTriangle,
           iconColor: 'text-rose-600',
         };
+      case 'INACTIVE':
       case 'EXPIRED':
         return {
-          title: language === 'pcm' ? 'Registration Don Expire' : 'Registration Inactive / Expired',
+          title: language === 'pcm' ? 'Registration Inactive / Don Expire' : 'Registration Inactive / Expired',
           subtitle: language === 'pcm'
-            ? 'Dis medicine registration authorization don elapse'
-            : 'Marketing authorization has expired and is not active in this snapshot',
+            ? 'Dis medicine registration authorization don elapse or dey inactive'
+            : 'Marketing authorization is inactive or expired in this snapshot',
           bgColor: 'bg-amber-50',
           borderColor: 'border-amber-300',
           textColor: 'text-amber-950',
           badgeBg: 'bg-amber-600',
           badgeText: 'text-white',
           icon: Clock,
+          iconColor: 'text-amber-600',
+        };
+      case 'UNREADABLE':
+        return {
+          title: language === 'pcm' ? 'Image No Clear: Unreadable' : 'Unreadable Label Details',
+          subtitle: language === 'pcm'
+            ? 'We no fit read clear NAFDAC number or medicine name from dis picture'
+            : 'Not enough readable text was extracted to evaluate registry alignment',
+          bgColor: 'bg-amber-50',
+          borderColor: 'border-amber-300',
+          textColor: 'text-amber-950',
+          badgeBg: 'bg-amber-600',
+          badgeText: 'text-white',
+          icon: AlertCircle,
           iconColor: 'text-amber-600',
         };
       case 'NOT_FOUND':
