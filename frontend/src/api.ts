@@ -7,7 +7,7 @@
 import { CheckRequest, CheckResponse, MatchedRecord, LanguageCode } from './types';
 import { performRegistryCheck, searchRegistryByQuery, NAFDAC_REGISTRY_DATABASE } from './mockRegistry';
 
-const BACKEND_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/+$/, '');
+const BACKEND_BASE_URL = (import.meta.env.API_BASE_URL || import.meta.env.VITE_API_BASE_URL || '').replace(/\/+$/, '');
 
 export async function checkMedicine(request: CheckRequest): Promise<CheckResponse> {
   try {

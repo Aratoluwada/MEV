@@ -19,4 +19,5 @@ backend/**/__pycache__/
 backend/.pytest_cache/
 backend/data/*
 !backend/data/.gitkeep
+!backend/data/registry.db
 backend/medicine_registry_checker.egg-info/
