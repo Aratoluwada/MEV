@@ -111,3 +111,35 @@ def test_verify_inactive_medicine_real_greenbook():
     assert data["matched_record"]["status"] == "INACTIVE"
 
 
+def test_active_status_with_past_expiry_is_inactive(monkeypatch):
+    record = registry_repository.get_by_nrn("A4-6238")
+    assert record is not None
+    expired_record = record.model_copy(update={"expiry_date": "2020-01-01"})
+    monkeypatch.setattr(registry_repository, "get_by_nrn", lambda nrn: expired_record)
+
+    response = client.post("/api/v1/check", json={"nrn": "A4-6238", "product_name": "Artheget EZ"})
+    assert response.status_code == 200
+    data = response.json()
+
+    assert data["verdict"] == VerdictEnum.INACTIVE.value
+    assert data["confidence_percentage"] == 0
+    assert data["comparison"]["status"]["registry"] == "EXPIRED"
+    assert any("expiry date" in reason.lower() for reason in data["reasons"])
+
+
+def test_verify_not_found():
+    """Scenario: An unlisted NRN in the 7,460 records."""
+    payload = {
+        "nrn": "99-9999",
+        "product_name": "Unregistered Miracle Tonic",
+    }
+    response = client.post("/api/v1/check", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+
+    assert data["verdict"] == VerdictEnum.NOT_FOUND.value
+    assert data["confidence_percentage"] == 0
+    assert data["confidence_tier"] == ConfidenceTier.LOW.value
+    assert data["matched_record"] is None
+
+
