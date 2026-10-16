@@ -25,3 +25,16 @@ def _compare_names(submitted: str | None, registered: str) -> tuple[bool | None,
     if significant_overlap or len(overlap) >= 2:
         return True, f"Name aligns (matched: {', '.join(overlap)})"
     return False, f"Name mismatch ('{submitted}' vs registered '{registered}')"
+
+def _compare_ingredients(submitted: list[str] | None, registered: list[str]) -> tuple[bool | None, str | None]:
+    if not submitted or len(submitted) == 0:
+        return None, "Not submitted"
+    clean_sub = {_clean_text(i) for i in submitted if i and _clean_text(i)}
+    clean_reg = {_clean_text(i) for i in registered if i and _clean_text(i)}
+    if not clean_sub:
+        return None, "Not submitted"
+    overlap = clean_sub.intersection(clean_reg)
+    if overlap:
+        matched_str = ", ".join(overlap)
+        return True, f"Matches ({matched_str})"
+    return False, f"Ingredient mismatch: submitted {list(clean_sub)} vs registered {list(clean_reg)}"
