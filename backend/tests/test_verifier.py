@@ -61,3 +61,37 @@ def test_verify_critical_conflict_name_mismatch():
     assert "CRITICAL CONFLICT" in data["reasons"][0]
 
 
+def test_verify_critical_conflict_strength_mismatch():
+    """Scenario: Strength conflict alone MUST trigger REGISTERED_MISMATCH and zero score."""
+    payload = {
+        "nrn": "A4-6238",
+        "product_name": "Artheget EZ",
+        "strength": "1000 mg",  # Registered is 80 mg; 480 mg
+    }
+    response = client.post("/api/v1/check", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+
+    assert data["verdict"] == VerdictEnum.REGISTERED_MISMATCH.value
+    assert data["confidence_percentage"] == 0
+    assert data["confidence_tier"] == ConfidenceTier.CONFLICT.value
+    assert any("Strength" in r for r in data["reasons"])
+
+
+def test_verify_critical_conflict_dosage_form_mismatch():
+    """Scenario: Dosage form conflict alone MUST trigger REGISTERED_MISMATCH and zero score."""
+    payload = {
+        "nrn": "A4-6238",
+        "product_name": "Artheget EZ",
+        "dosage_form": "Syrup",  # Registered is Tablet
+    }
+    response = client.post("/api/v1/check", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+
+    assert data["verdict"] == VerdictEnum.REGISTERED_MISMATCH.value
+    assert data["confidence_percentage"] == 0
+    assert data["confidence_tier"] == ConfidenceTier.CONFLICT.value
+    assert any("Dosage form" in r for r in data["reasons"])
+
+
