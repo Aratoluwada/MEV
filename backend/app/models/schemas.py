@@ -33,3 +33,23 @@ class ExplanationBlock(BaseModel):
     summary: str
     pidgin_summary: str | None = None
     action_recommendation: str
+
+from app.models.registry import RegistryRecord
+
+class CheckRequest(BaseModel):
+    nrn: str | None = Field(default=None, description="NAFDAC Registration Number")
+    product_name: str | None = Field(default=None, description="Brand or trade name")
+    active_ingredients: list[str] | None = Field(default=None, description="List of active pharmaceutical ingredients")
+    strength: str | None = Field(default=None, description="Strength (e.g., '500 mg')")
+    dosage_form: str | None = Field(default=None, description="Dosage form (e.g., 'Tablet')")
+    language: str = Field(default="en", description="'en' for English, 'pcm' for Nigerian Pidgin")
+
+class CheckResponse(BaseModel):
+    verdict: VerdictEnum
+    confidence_percentage: int
+    confidence_tier: ConfidenceTier
+    reasons: list[str] = Field(default_factory=list)
+    comparison: ComparisonBreakdown
+    matched_record: RegistryRecord | None = None
+    explanation: ExplanationBlock
+    dataset_metadata: dict | None = None
