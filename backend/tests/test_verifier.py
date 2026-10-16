@@ -194,3 +194,90 @@ def test_verify_image_fails_closed_as_unreadable():
     files = {"file": ("label.jpg", valid_jpeg_header, "image/jpeg")}
     response = client.post("/api/v1/verify-image", files=files)
     assert response.status_code == 200
+    data = response.json()
+
+    assert data["verdict"] == VerdictEnum.UNREADABLE.value
+    assert data["confidence_percentage"] == 0
+    assert data["matched_record"] is None
+
+
+def test_verify_image_rejects_low_confidence_extraction(monkeypatch):
+    def extract_low_confidence(image_bytes, mime_type="image/jpeg"):
+        return ExtractedLabel(
+            extraction_confidence=0.69,
+            nrn="A4-6238",
+            product_name="Artheget EZ",
+            active_ingredients=["Artemether", "Lumefantrine"],
+            strength="80 mg; 480 mg",
+            dosage_form="Tablet",
+            confidence_notes="NRN is partly blurred.",
+        )
+
+    monkeypatch.setattr(label_extractor, "extract_from_bytes", extract_low_confidence)
+    valid_jpeg_header = b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00\x60\x00\x60\x00\x00"
+    files = {"file": ("label.jpg", valid_jpeg_header, "image/jpeg")}
+
+    response = client.post("/api/v1/verify-image", files=files)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["verdict"] == VerdictEnum.UNREADABLE.value
+    assert data["confidence_percentage"] == 0
+    assert data["matched_record"] is None
+    assert "69%" in data["reasons"][0]
+
+
+def test_verify_image_accepts_confident_extraction(monkeypatch):
+    def extract_high_confidence(image_bytes, mime_type="image/jpeg"):
+        return ExtractedLabel(
+            extraction_confidence=0.9,
+            nrn="A4-6238",
+            product_name="Artheget EZ",
+            active_ingredients=["Artemether", "Lumefantrine"],
+            strength="80 mg; 480 mg",
+            dosage_form="Tablet",
+        )
+
+    monkeypatch.setattr(label_extractor, "extract_from_bytes", extract_high_confidence)
+    valid_jpeg_header = b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00\x60\x00\x60\x00\x00"
+    files = {"file": ("label.jpg", valid_jpeg_header, "image/jpeg")}
+
+    response = client.post("/api/v1/verify-image", files=files)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["verdict"] == VerdictEnum.REGISTERED_MATCH.value
+    assert data["matched_record"]["nrn"] == "A4-6238"
+
+
+def test_image_upload_magic_bytes_safeguard():
+    """Reject non-image files even if client sends image/jpeg Content-Type header."""
+    fake_file_bytes = b"This is a text file claiming to be an image."
+    files = {"file": ("malicious.jpg", fake_file_bytes, "image/jpeg")}
+    response = client.post("/api/v1/scan-label", files=files)
+    assert response.status_code == 400
+    assert "Unsupported image format" in response.json()["detail"]
+
+
+def test_basket_duplicate_ingredient_check():
+    """Detect duplicate ingredients across multiple medicines in basket."""
+    # Flu-Cof (B4-4561) and Ibucap (B4-6718) both contain Paracetamol
+    payload = {
+        "nrns": ["B4-4561", "B4-6718"],
+        "product_names": [],
+    }
+    response = client.post("/api/v1/basket-check", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+
+    assert data["has_duplicate_ingredients"] is True
+    assert len(data["alerts"]) >= 1
+    assert any("Paracetamol" in a["ingredient"] for a in data["alerts"])
+
+
+def test_product_endpoint_lookup():
+    """Test /api/v1/product/{nrn} returns real Greenbook record."""
+    response = client.get("/api/v1/product/A4-6238")
+    assert response.status_code == 200
+    record = response.json()
+    assert record["nrn"] == "A4-6238"
+    assert record["product_name"] == "Artheget EZ"
+    assert "Artemether" in record["active_ingredients"]
