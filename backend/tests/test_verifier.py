@@ -95,3 +95,19 @@ def test_verify_critical_conflict_dosage_form_mismatch():
     assert any("Dosage form" in r for r in data["reasons"])
 
 
+def test_verify_inactive_medicine_real_greenbook():
+    """Scenario: Checking an inactive/expired registration from official Greenbook (Marley Paracetamol C4-1496)."""
+    payload = {
+        "nrn": "C4-1496",
+        "product_name": "Marley Paracetamol Injection",
+    }
+    response = client.post("/api/v1/check", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+
+    assert data["verdict"] == VerdictEnum.INACTIVE.value
+    assert data["confidence_percentage"] == 0
+    assert data["confidence_tier"] == ConfidenceTier.CONFLICT.value
+    assert data["matched_record"]["status"] == "INACTIVE"
+
+
