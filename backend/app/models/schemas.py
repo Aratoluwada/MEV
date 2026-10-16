@@ -53,3 +53,7 @@ class CheckResponse(BaseModel):
     matched_record: RegistryRecord | None = None
     explanation: ExplanationBlock
     dataset_metadata: dict | None = None
+
+class TextCheckRequest(BaseModel):
+    query: str = Field(..., description="Free-text packaging description")
+    language: str = Field(default="en", description="'en' for English or 'pcm' for Nigerian Pidgin")
