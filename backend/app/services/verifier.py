@@ -38,3 +38,29 @@ def _compare_ingredients(submitted: list[str] | None, registered: list[str]) -> 
         matched_str = ", ".join(overlap)
         return True, f"Matches ({matched_str})"
     return False, f"Ingredient mismatch: submitted {list(clean_sub)} vs registered {list(clean_reg)}"
+
+def _compare_strengths(submitted: str | None, registered: str) -> tuple[bool | None, str | None]:
+    if not submitted or not submitted.strip():
+        return None, "Not submitted"
+    clean_sub = _clean_text(submitted)
+    clean_reg = _clean_text(registered)
+    if not clean_sub:
+        return None, "Not submitted"
+    if clean_sub == clean_reg:
+        return True, "Exact strength match"
+    sub_nums = re.findall(r"\d+", clean_sub)
+    reg_nums = re.findall(r"\d+", clean_reg)
+    if sub_nums and set(sub_nums).issubset(set(reg_nums)):
+        return True, f"Strength aligns ({submitted})"
+    return False, f"Strength mismatch: '{submitted}' vs registered '{registered}'"
+
+def _compare_dosage_forms(submitted: str | None, registered: str) -> tuple[bool | None, str | None]:
+    if not submitted or not submitted.strip():
+        return None, "Not submitted"
+    clean_sub = _clean_text(submitted)
+    clean_reg = _clean_text(registered)
+    if not clean_sub:
+        return None, "Not submitted"
+    if clean_sub in clean_reg or clean_reg in clean_sub:
+        return True, "Dosage form matches"
+    return False, f"Dosage form mismatch: '{submitted}' vs registered '{registered}'"
