@@ -1,0 +1,9 @@
+{
+  "name": "MEV",
+  "description": "MEV - Mobile-first NAFDAC medicine registration checker verifying drug packaging details against the regulatory registry snapshot by photo, text, or voice.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
