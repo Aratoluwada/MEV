@@ -1,0 +1,148 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --bg-paper: #FFF9ED;
+    --text-black: #171717;
+    --brand-yellow: #F5E947;
+    --lime-match: #A9F04D;
+    --blue-cobalt: #4169F5;
+    --coral-mismatch: #FF7B70;
+  }
+
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    background-color: #FFF9ED;
+  }
+
+  body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background-color: #FFF9ED;
+    color: #171717;
+    overflow-x: hidden;
+    margin: 0;
+  }
+
+  h1, h2, h3, h4, h5, h6, .font-heading {
+    font-family: 'Space Grotesk', system-ui, sans-serif;
+    letter-spacing: -0.03em;
+  }
+
+  code, pre, .font-mono {
+    font-family: 'JetBrains Mono', monospace;
+  }
+}
+
+/* Neo-Brutalist Reusable Utility Classes */
+.neo-box {
+  background-color: #FFFFFF;
+  border: 2px solid #171717;
+  box-shadow: 4px 4px 0px #171717;
+}
+
+.neo-box-lg {
+  background-color: #FFFFFF;
+  border: 3px solid #171717;
+  box-shadow: 6px 6px 0px #171717;
+}
+
+.neo-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  background-color: #F5E947;
+  color: #171717;
+  border: 2.5px solid #171717;
+  box-shadow: 4px 4px 0px #171717;
+  transition: all 0.12s ease-in-out;
+  cursor: pointer;
+}
+
+.neo-btn-primary:hover {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0px #171717;
+}
+
+.neo-btn-primary:active {
+  transform: translate(4px, 4px);
+  box-shadow: 0px 0px 0px #171717;
+}
+
+.neo-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  background-color: #FFFFFF;
+  color: #171717;
+  border: 2.5px solid #171717;
+  box-shadow: 4px 4px 0px #171717;
+  transition: all 0.12s ease-in-out;
+  cursor: pointer;
+}
+
+.neo-btn-secondary:hover {
+  background-color: #F8F8F8;
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0px #171717;
+}
+
+.neo-btn-secondary:active {
+  transform: translate(4px, 4px);
+  box-shadow: 0px 0px 0px #171717;
+}
+
+.neo-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 0.15rem 0.5rem;
+  border: 1.5px solid #171717;
+  box-shadow: 2px 2px 0px #171717;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scannerLine {
+  0% { transform: translateY(0%); }
+  50% { transform: translateY(100%); }
+  100% { transform: translateY(0%); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-slide-down {
+  animation: slideDown 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-scanner {
+  animation: scannerLine 2s infinite ease-in-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
