@@ -157,3 +157,31 @@ def test_unknown_submitted_nrn_does_not_fall_back_to_name_match():
     assert data["confidence_percentage"] == 0
     assert data["matched_record"] is None
     assert data["comparison"]["nrn"]["matches"] is False
+
+
+def test_name_only_lookup_capped_confidence():
+    """Scenario: Name-only lookup cannot score 100% or claim full certainty without NRN."""
+    payload = {
+        "product_name": "Spironolactone",
+    }
+    response = client.post("/api/v1/check", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+
+    assert data["verdict"] == VerdictEnum.REGISTERED_MATCH.value
+    assert data["confidence_percentage"] <= 50
+    assert data["confidence_tier"] in [ConfidenceTier.MEDIUM.value, ConfidenceTier.LOW.value]
+
+
+def test_scan_label_fails_closed_when_unreadable():
+    """When an image contains no readable label, extractor returns NO fake details; all fields must be None."""
+    valid_jpeg_header = b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00\x60\x00\x60\x00\x00"
+    files = {"file": ("label.jpg", valid_jpeg_header, "image/jpeg")}
+    response = client.post("/api/v1/scan-label", files=files)
+    assert response.status_code == 200
+    data = response.json()
+
+    assert data["nrn"] is None
+    assert data["product_name"] is None
+    assert data["active_ingredients"] == []
+    assert data["strength"] is None
