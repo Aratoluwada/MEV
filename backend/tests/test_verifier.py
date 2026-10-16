@@ -185,3 +185,12 @@ def test_scan_label_fails_closed_when_unreadable():
     assert data["product_name"] is None
     assert data["active_ingredients"] == []
     assert data["strength"] is None
+    assert data["dosage_form"] is None
+
+
+def test_verify_image_fails_closed_as_unreadable():
+    """Without readable text extracted, /verify-image MUST fail closed as UNREADABLE (0% confidence)."""
+    valid_jpeg_header = b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00\x60\x00\x60\x00\x00"
+    files = {"file": ("label.jpg", valid_jpeg_header, "image/jpeg")}
+    response = client.post("/api/v1/verify-image", files=files)
+    assert response.status_code == 200
