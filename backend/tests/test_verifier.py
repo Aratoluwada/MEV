@@ -44,3 +44,20 @@ def test_verify_exact_match_real_greenbook():
     assert "NAFDAC Greenbook" in data["dataset_metadata"]["source"]
 
 
+def test_verify_critical_conflict_name_mismatch():
+    """Scenario: Cloned NRN - NRN belongs to antimalarial, but packaging claims Paracetamol."""
+    payload = {
+        "nrn": "A4-6238",
+        "product_name": "Paracetamol Tablets",
+        "active_ingredients": ["Paracetamol"],
+    }
+    response = client.post("/api/v1/check", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+
+    assert data["verdict"] == VerdictEnum.REGISTERED_MISMATCH.value
+    assert data["confidence_percentage"] == 0
+    assert data["confidence_tier"] == ConfidenceTier.CONFLICT.value
+    assert "CRITICAL CONFLICT" in data["reasons"][0]
+
+
