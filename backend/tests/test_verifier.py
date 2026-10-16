@@ -143,3 +143,17 @@ def test_verify_not_found():
     assert data["matched_record"] is None
 
 
+def test_unknown_submitted_nrn_does_not_fall_back_to_name_match():
+    """An unrecognized printed NRN must not be overridden by a known product name."""
+    payload = {
+        "nrn": "99-9999",
+        "product_name": "Artheget EZ",
+    }
+    response = client.post("/api/v1/check", json=payload)
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["verdict"] == VerdictEnum.NOT_FOUND.value
+    assert data["confidence_percentage"] == 0
+    assert data["matched_record"] is None
+    assert data["comparison"]["nrn"]["matches"] is False
