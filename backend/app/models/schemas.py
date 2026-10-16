@@ -27,3 +27,9 @@ class ComparisonBreakdown(BaseModel):
     strength: FieldComparison = Field(default_factory=FieldComparison)
     dosage_form: FieldComparison = Field(default_factory=FieldComparison)
     status: FieldComparison = Field(default_factory=FieldComparison)
+
+class ExplanationBlock(BaseModel):
+    language: str = Field(default="en", description="'en' for English or 'pcm' for Nigerian Pidgin")
+    summary: str
+    pidgin_summary: str | None = None
+    action_recommendation: str
